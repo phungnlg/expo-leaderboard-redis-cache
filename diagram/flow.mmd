@@ -1,0 +1,25 @@
+flowchart TD
+  UI["📱 React Native UI<br/>Top Products list<br/>PerfHeader + history strip"]
+  API["⚙️ Node.js + TypeScript API<br/>cache-aside service"]
+  REDIS{"⚡ Redis<br/>leaderboard:v1:all:N"}
+  PG["🗄️ PostgreSQL<br/>JOIN products + orders + reviews<br/>GROUP BY · ORDER BY revenue<br/>~50k rows · ~280ms"]
+  FR["🔥 Force refresh"]
+
+  UI -->|"GET /api/leaderboard"| API
+  API -->|"GET key"| REDIS
+  REDIS -->|"HIT ~6ms"| API
+  REDIS -->|"MISS"| PG
+  PG -->|"SET key EX 60"| REDIS
+  API -->|"source + elapsedMs"| UI
+  FR -->|"POST /leaderboard/refresh<br/>SCAN + UNLINK"| REDIS
+
+  classDef ui fill:#1C2942,stroke:#5B8DEF,color:#E8EEF9,stroke-width:2px;
+  classDef api fill:#1C2942,stroke:#8FA0BC,color:#E8EEF9,stroke-width:2px;
+  classDef cache fill:#10241C,stroke:#34D399,color:#E8EEF9,stroke-width:2px;
+  classDef db fill:#2A2412,stroke:#FBBF24,color:#E8EEF9,stroke-width:2px;
+  classDef fr fill:#2A2412,stroke:#FBBF24,color:#FBBF24,stroke-width:2px;
+  class UI ui;
+  class API api;
+  class REDIS cache;
+  class PG db;
+  class FR fr;

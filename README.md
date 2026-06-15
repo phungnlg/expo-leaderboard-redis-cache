@@ -14,6 +14,13 @@ Built with Expo, React Native, TypeScript, and Zustand. The mobile app runs on
 built-in mock data so it demos standalone on a simulator; point it at the Node
 backend in [`backend/`](backend) to hit live PostgreSQL + Redis.
 
+## Demo
+
+MISS (Postgres) - HIT (Redis, 51x faster) - Force refresh busts the cache back to
+a MISS - HIT again - product detail.
+
+![Demo](screenshots/demo.gif)
+
 ## Screenshots
 
 | Cache MISS (Postgres) | Cache HIT (Redis) | Product detail | How it works |
@@ -22,16 +29,13 @@ backend in [`backend/`](backend) to hit live PostgreSQL + Redis.
 
 ## How it works
 
-```mermaid
-flowchart TD
-  UI[React Native list<br/>PerfHeader + history strip] -->|GET /api/leaderboard| API[Node.js + TS API<br/>cache-aside service]
-  API -->|GET key| R{Redis<br/>leaderboard:v1:all:N}
-  R -->|HIT ~6ms| API
-  R -->|MISS| PG[PostgreSQL<br/>JOIN + GROUP BY + ORDER BY<br/>~50k orders, ~280ms]
-  PG -->|SET key EX 60| R
-  API -->|source + elapsedMs| UI
-  FR[Force refresh] -->|POST /leaderboard/refresh<br/>SCAN + UNLINK| R
-```
+![Flow diagram](screenshots/flow-diagram.png)
+
+A read checks Redis first (`GET key`). On a HIT it returns the pre-serialized
+JSON in single-digit ms. On a MISS it runs the expensive PostgreSQL aggregation
+(`JOIN + GROUP BY + ORDER BY` over ~50k orders, ~280ms), caches the result with
+`SET key EX 60`, then returns. Force refresh `SCAN + UNLINK`s the key so the next
+read is a guaranteed MISS.
 
 ## Features
 
